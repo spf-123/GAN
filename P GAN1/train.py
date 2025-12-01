@@ -19,6 +19,7 @@ from utils.losses import (
 )
 from utils.images import save_samples
 
+torch.backends.cudnn.benchmark = True
 
 def to_numpy01(t):
     """BCHW [0,1] -> HWC [0,1]"""

@@ -88,6 +88,7 @@ class MultiResUp(nn.Module):
         x = self.block(x)
         return x
 
+
 class UNetSwinMultiResGenerator(nn.Module):
     def __init__(self, base=64):
         super().__init__()
@@ -96,19 +97,19 @@ class UNetSwinMultiResGenerator(nn.Module):
         self.enc1 = MultiResDown(base, base * 2)
         self.enc2 = MultiResDown(base * 2, base * 4)
         self.enc3 = MultiResDown(base * 4, base * 8)
-        self.enc4 = MultiResDown(base * 8, base * 8)
-
+        self.enc4 = MultiResDown(base * 8, base * 8)  # 输出是 8*base
 
         self.bottleneck = nn.Sequential(
             WaveletMambaBlock(dim=base * 8),
             WaveletMambaBlock(dim=base * 8)
-        )
+        )  # 输出是 8*base
 
-        # Decoder (保持不变)
-        self.dec3 = MultiResUp(base * 16, base * 8)
-        self.dec2 = MultiResUp(base * 12, base * 4)
-        self.dec1 = MultiResUp(base * 6, base * 2)
-        self.dec0 = MultiResUp(base * 3, base)
+        # [修正] Decoder 的输入通道必须匹配上一层的输出
+        # 参数格式: MultiResUp(上一层输入的通道数, 本层Skip Connection的通道数)
+        self.dec3 = MultiResUp(base * 8, base * 8)  # 输入8(bottleneck), 拼接8(enc3) -> 处理后输出8
+        self.dec2 = MultiResUp(base * 8, base * 4)  # 输入8(dec3), 拼接4(enc2) -> 处理后输出4
+        self.dec1 = MultiResUp(base * 4, base * 2)  # 输入4(dec2), 拼接2(enc1) -> 处理后输出2
+        self.dec0 = MultiResUp(base * 2, base)  # 输入2(dec1), 拼接1(enc0) -> 处理后输出1
 
         self.out_conv = nn.Conv2d(base, 3, kernel_size=1)
         self.act = nn.Sigmoid()
